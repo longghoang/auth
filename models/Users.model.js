@@ -7,6 +7,8 @@ const UserSchema = mongoose.Schema({
     avt: { type: Buffer , default: null },
     add: { type: String , default: null },
     isAdmin: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false },
+    method: { type: String, default: 'email' },
     refreshToken: { type: String, default: null }
 }, {
     timestamps: true

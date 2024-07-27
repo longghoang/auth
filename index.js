@@ -52,11 +52,43 @@ app.post('/register', async (req, res) => {
     if (!data.email || !data.password) {
         return res.status(400).json({ message: 'Invalid request data' });
     }
-    const passw = req.body.password;
+    const passw = data.password;
     const hashpw = cryptojs.SHA256(passw).toString();
     const userData = {
-        email: req.body.email,
+        email: data.email,
         hashpw
+    }
+    try {
+        const user = await UserModel.create(userData);
+        const  { accessToken, refreshToken } = await generateToken(user);
+        await updateRefreshToken(user._id.toString(), refreshToken);
+        const uid = user._id.toString();
+        return res.status(201).json({uid, accessToken});
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ message: 'Invalid request data', error: error.message });
+        } else if (error.code === 11000) {
+            console.log('1100');
+            return res.status(409).json({ message: 'Conflict: Duplicate data' });
+        } else {
+            return res.status(500).json({ message: 'Internal server error', error: error.message });
+        }
+    }
+});
+
+app.post('/register-firebase', async (req, res) => {
+    console.log('Is register firebase');
+    const data = req.body;
+    if (!data.email || !data.password || !data.name) {
+        return res.status(400).json({ message: 'Invalid request data' });
+    }
+    const passw = data.password;
+    const hashpw = cryptojs.SHA256(passw).toString();
+    const userData = {
+        email: data.email,
+        hashpw,
+        name: data.name,
+        method: data.method
     }
     try {
         const user = await UserModel.create(userData);
