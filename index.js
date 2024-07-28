@@ -126,6 +126,23 @@ app.post('/login', async (req, res) => {
     }
 })
 
+
+app.post('/login-firebase', async (req, res) => {
+    console.log('Is login firebase');
+    const data = req.body;
+    if (!data.email) return res.status(400).json({ message: 'Invalid request data' });
+    try {
+        const user = await UserModel.findOne({ email: data.email });
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
+        const  { accessToken, refreshToken } = await generateToken(user);
+        await updateRefreshToken(user._id.toString(), refreshToken);
+        const uid = user._id.toString();
+        return res.status(200).json({ uid, accessToken });
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+})
+
 app.post('/token', async (req, res) => {
     console.log('Is token');
     const rft = req.body.refreshToken;
