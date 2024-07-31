@@ -6,8 +6,12 @@ const UserSchema = mongoose.Schema({
     name: { type: String , default: 'User' },
     avt: { type: Buffer , default: null },
     add: { type: String , default: null },
-    isAdmin: { type: Boolean, default: false },
+    birth: { type: String, default: null},
+    sdt: { type: String , default: null },
+    level: { type: Number, default: 0 },
     isVerified: { type: Boolean, default: false },
+    verificationCode: { type: String, default: null },
+    verificationCodeExpires: { type: Date, default: null },
     method: { type: String, default: 'email' },
     refreshToken: { type: String, default: null }
 }, {
