@@ -7,7 +7,7 @@ const UserSchema = mongoose.Schema({
     avt: { type: Buffer , default: null },
     add: { type: String , default: null },
     birth: { type: String, default: null},
-    sdt: { type: String , default: null },
+    phoneNum: { type: String , default: null },
     level: { type: Number, default: 0 },
     isVerified: { type: Boolean, default: false },
     verificationCode: { type: String, default: null },
