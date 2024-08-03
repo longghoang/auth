@@ -38,7 +38,7 @@ app.post('/register', async (req, res) => {
         return res.status(400).json({ message: 'Invalid request data' });
     }
     const verificationCode = await verifyEmailCode(data.email);
-    const verificationCodeExpires = new Date(Date.now() + 3600000);
+    const verificationCodeExpires = new Date(Date.now() + 60000);
     const passw = data.password;
     const hashpw = cryptojs.SHA256(passw).toString();
     const userData = {
@@ -50,7 +50,7 @@ app.post('/register', async (req, res) => {
     try {
         const user = await UserModel.create(userData);
         return res.status(201)
-        .json({uid: user._id.toString()});
+        .json({uid: user._id.toString(), expires: verificationCodeExpires.toString()});
     } catch (error) {
         console.log(error);
         if (error.name === 'ValidationError') {
@@ -76,6 +76,21 @@ app.post('/verify', async (req, res) => {
         await updateRefreshToken(user._id.toString(), refreshToken);
         const uid = user._id.toString();
         return res.status(200).json({ uid, accessToken });
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+})
+
+app.post('/getcode', async (req, res) => {
+    const data = req.body;
+    if(!data.id) return res.status(400).json({ message: 'Invalid request data' });
+    try {
+        const user = await UserModel.findById(data.id);
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
+        const verificationCode = await verifyEmailCode(user.email);
+        const verificationCodeExpires = new Date(Date.now() + 60000);
+        await UserModel.findByIdAndUpdate(data.id, { verificationCode, verificationCodeExpires });
+        return res.status(200).json({ expires: verificationCodeExpires.toString() });
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
     }
@@ -122,6 +137,9 @@ app.post('/login', async (req, res) => {
         const user = await UserModel.findOne({ email: data.email });
         if (!user) return res.status(401).json({ message: 'Unauthorized' });
         if(!compare(data.password, user.hashpw)) return res.status(401).json({ message: 'Unauthorized' });
+        if(!user.isVerified) {
+            return res.status(403).json({ message: "Account has not verified" });
+        }
         const  { accessToken, refreshToken } = await generateToken(user);
         await updateRefreshToken(user._id.toString(), refreshToken);
         const uid = user._id.toString();
@@ -162,13 +180,12 @@ app.patch('/update-info', async (req, res) => {
 
 app.post('/token', async (req, res) => {
     console.log('Is token');
-    const rft = req.body.refreshToken;
-    if (!rft) return res.status(401).json({ message: 'Unauthorized: No refresh token provided' });
+    const { uid } = req.body;
+    if (!uid) return res.status(401).json({ message: 'Unauthorized: No refresh token provided' });
     try {
-        const rftData = jwt.verify(rft, process.env.REFRESH_TOKEN_SECRET);
-        const user = await UserModel.findById(rftData.id);
-        if(!user) return res.status(404).json({ message: 'User not found' });
-        const { accessToken, refreshToken } = await generateToken(user);
+        const user = await UserModel.findById(uid);
+        await jwt.verify(user.refreshToken, process.env.REFRESH_TOKEN_SECRET)
+        const  { accessToken, refreshToken } = await generateToken(user);
         await updateRefreshToken(user._id.toString(), refreshToken);
         return res.status(200).json({ accessToken });
     } catch (error) {
